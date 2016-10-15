@@ -1,6 +1,7 @@
 // repoOwner = lighthouse-labs, repoName = laser-shark
 
 var request = require('request');
+var fs = require('fs');
 
 var repoOwner = process.argv[2];
 var repoName = process.argv[3];
@@ -17,34 +18,31 @@ function githubRequest(endpoint, callback) {
   request.get(options, callback);
 }
 
-function getGithubCollabs(username, callback) {
+function getGithubCollaborators(username , repo, callback) {
+  var endpoint = `/repos/${username}/${repo}/contributors`;
+  githubRequest(endpoint, callback );
+}
+
+function getRepoContributors(repoOwner, repoName,  callback) {
   githubRequest(endpoint, callback);
 }
 
-
-getGithubCollabs(repoOwner, function (error, response, body) {
+getRepoContributors(repoOwner, repoName, function(error, response, body) {
   if (error) {
-    console.log("Something went horribly wrong:" + error);
+    console.log("Something went horribly wrong" + error);
     return;
   }
 
   var result = JSON.parse(body);
-
-  console.log(result);
-
-  result.forEach(function(image) {
-    var avaImage = `${image.avatar_url}`;
-    console.log(avaImage);
-
-
-
-    var fs = require('fs');
-    fs.writeFile("./url.txt", avaImage, function(err) {
-    if(err) {
-      return console.log(err);
-    }
-
-    console.log("The file was saved!");
-    });
+  result.forEach(function(contributor){
+    downloadImageByUrl(contributor.avatar_url, `avatars/${contributor.login}`);
   });
 });
+
+
+function downloadImageByUrl (url, filePath) {
+  request.head(url, function(err, res, body){
+    var fileNameExt = res.headers['content-type'].split('/').pop();
+    request(url).pipe(fs.createWriteStream(`${filePath}.${fileNameExt}`));
+  });
+}
